@@ -67,7 +67,7 @@ export default function Auth() {
                             onClick={() => {setHelp(true)}}
                         > Как получить токен для входа?</p>
                         {help === true && (
-                            <p className="help"><a href="tg://t.me/aster_webapp_bot">Получите токен в боте</a></p>
+                            <p className="help"><a href="tg://t.me/o6menbot">Получите токен в боте</a></p>
                         )}
                     </div>
                 </div>

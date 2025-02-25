@@ -832,7 +832,7 @@ body {
       .search-input {
         width: 100%;
         background-color: #f1f5f9;
-        height: 50px;
+        height: 80%;
         border-radius: 15px;
         display: flex;
         align-items: center;
@@ -1387,27 +1387,17 @@ dialog.modal {
       }
 
       .search-input {
-        width: 50%;
+        width: 90%;
         background-color: #f1f5f9;
-        height: 50px;
+        height: 80%;
         border-radius: 15px;
         display: flex;
         align-items: center;
-        padding-left: 20px;
         font-size: 18px;
         color: #334155;
-        border: 2px solid #e2e8f0;
         transition: border-color 0.3s ease, box-shadow 0.3s ease;
         outline: none;
-
-        &::placeholder {
-          color: #a0aec0;
-        }
-
-        &:focus {
-          border-color: #4338ca;
-          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-        }
+        border: none;
       }
 
       .choice-modal {
@@ -1586,6 +1576,122 @@ dialog.modal {
 
 .filter {
   margin-left: 1%;
+}
+
+.input_box {
+  display: flex;
+  justify-content: space-around;
+  width: 50%;
+  height: 50px;
+  background-color: #f1f5f9;
+  
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  padding-left: 20px;
+  font-size: 18px;
+  color: #334155;
+  border: 2px solid #e2e8f0;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  outline: none;
+
+  &::placeholder {
+    color: #a0aec0;
+  }
+
+  &:hover {
+    border-color: #4338ca;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  }
+}
+
+.clouse_input {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  width: 10%;
+  cursor: pointer;
+  border-radius: 15px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  
+
+  &:hover {
+    background-color: #ffffff;
+    box-shadow: 0 6px 20px #d2d2d2;
+  }
+}
+
+.cluse_svg {
+  height: 50%;
+  width: 50%;
+}
+
+.modul_butto_box {
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+}
+
+.date-filters {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  width: 30vw;
+}
+
+.date_input_box {
+  width: 40%;
+}
+
+.date_input {
+  border: none;
+  margin-left: 3%;
+  width: 80%;
+  padding: 15px;
+  border: 2px solid #e2e8f0;
+  border-radius: 15px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  background: #ffffff;
+  margin-bottom: 2%;
+
+  &:focus {
+    outline: none;
+    border-color: #4338ca;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  }
+}
+
+.polosa {
+  width: 95%;
+  height: 2px;
+  background: #3b34c1;
+}
+
+.amount {
+  width: 90%;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  flex-direction: column;
+}
+
+.input-text {
+  width: 100%;
+  padding: 15px;
+  border: 2px solid #e2e8f0;
+  border-radius: 15px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  background: #ffffff;
+  margin-bottom: 2%;
+
+  &:focus {
+    outline: none;
+    border-color: #4338ca;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  }
 }
 
 @keyframes spin {

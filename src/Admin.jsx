@@ -10,6 +10,7 @@ const banks = {
     'alfa': 'Альфа'
 }
 
+
 const fullscreenEnterSvg = 'M18.5,5.5 L16,5.5 C15.1716,5.5 14.5,4.82843 14.5,4 C14.5,3.17157 15.1716,2.5 16,2.5 L19,2.5 C20.3807,2.5 21.5,3.61929 21.5,5 L21.5,8 C21.5,8.82843 20.8284,9.5 20,9.5 C19.1716,9.5 18.5,8.82843 18.5,8 L18.5,5.5 Z M8,5.5 L5.5,5.5 L5.5,8 C5.5,8.82843 4.82843,9.5 4,9.5 C3.17157,9.5 2.5,8.82843 2.5,8 L2.5,5 C2.5,3.61929 3.61929,2.5 5,2.5 L8,2.5 C8.82843,2.5 9.5,3.17157 9.5,4 C9.5,4.82843 8.82843,5.5 8,5.5 Z M8,18.5 L5.5,18.5 L5.5,16 C5.5,15.1716 4.82843,14.5 4,14.5 C3.17157,14.5 2.5,15.1716 2.5,16 L2.5,19 C2.5,20.3807 3.61929,21.5 5,21.5 L8,21.5 C8.82843,21.5 9.5,20.8284 9.5,20 C9.5,19.1716 8.82843,18.5 8,18.5 Z M16,18.5 L18.5,18.5 L18.5,16 C18.5,15.1716 19.1716,14.5 20,14.5 C20.8284,14.5 21.5,15.1716 21.5,16 L21.5,19 C21.5,20.3807 20.3807,21.5 19,21.5 L16,21.5 C15.1716,21.5 14.5,20.8284 14.5,20 C14.5,19.1716 15.1716,18.5 16,18.5 Z'
 const fullscreenExitSvg = 'M17.5,6.5 L20,6.5 C20.8284,6.5 21.5,7.17157 21.5,8 C21.5,8.82843 20.8284,9.5 20,9.5 L17,9.5 C15.6193,9.5 14.5,8.38071 14.5,7 L14.5,4 C14.5,3.17157 15.1716,2.5 16,2.5 C16.8284,2.5 17.5,3.17157 17.5,4 L17.5,6.5 Z M4,6.5 L6.5,6.5 L6.5,4 C6.5,3.17157 7.17157,2.5 8,2.5 C8.82843,2.5 9.5,3.17157 9.5,4 L9.5,7 C9.5,8.38071 8.38071,9.5 7,9.5 L4,9.5 C3.17157,9.5 2.5,8.82843 2.5,8 C2.5,7.17157 3.17157,6.5 4,6.5 Z M4,17.5 L6.5,17.5 L6.5,20 C6.5,20.8284 7.17157,21.5 8,21.5 C8.82843,21.5 9.5,20.8284 9.5,20 L9.5,17 C9.5,15.6193 8.38071,14.5 7,14.5 L4,14.5 C3.17157,14.5 2.5,15.1716 2.5,16 C2.5,16.8284 3.17157,17.5 4,17.5 Z M20,17.5 L17.5,17.5 L17.5,20 C17.5,20.8284 16.8284,21.5 16,21.5 C15.1716,21.5 14.5,20.8284 14.5,20 L14.5,17 C14.5,15.6193 15.6193,14.5 17,14.5 L20,14.5 C20.8284,14.5 21.5,15.1716 21.5,16 C21.5,16.8284 20.8284,17.5 20,17.5 Z'
 const arrowRightSvg = "M11.0731 18.8389C10.2649 19.5461 9 18.9721 9 17.8982L9 6.10192C9 5.02797 10.2649 4.454 11.0731 5.1612L17.3838 10.683C18.1806 11.3802 18.1806 12.6198 17.3838 13.317L11.0731 18.8389ZM10.5 17.3472L16.396 12.1882C16.5099 12.0886 16.5099 11.9115 16.396 11.8119L10.5 6.65286L10.5 17.3472Z"
@@ -400,8 +401,13 @@ function Withdraws() {
                     onClose={() => setActiveModal(null)} // Закрытие модала, сброс состояния
                 />
                 <div className='top'>
-                    <input type="text" placeholder='Поиск' className='search-input' value={search}
-                        onChange={(e) => setSearch(e.target.value)} />
+                    <div className="input_box">
+                        <input type="text" placeholder='Поиск' className='search-input' value={search}
+                            onChange={(e) => setSearch(e.target.value.toLowerCase())} />
+                        <div className="clouse_input" onClick={() => setSearch("")}>
+                            <img className="cluse_svg" src='data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/Pjxzdmcgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgMjQgMjQ7IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PGcgaWQ9ImluZm8iLz48ZyBpZD0iaWNvbnMiPjxwYXRoIGQ9Ik0xNC44LDEybDMuNi0zLjZjMC44LTAuOCwwLjgtMiwwLTIuOGMtMC44LTAuOC0yLTAuOC0yLjgsMEwxMiw5LjJMOC40LDUuNmMtMC44LTAuOC0yLTAuOC0yLjgsMCAgIGMtMC44LDAuOC0wLjgsMiwwLDIuOEw5LjIsMTJsLTMuNiwzLjZjLTAuOCwwLjgtMC44LDIsMCwyLjhDNiwxOC44LDYuNSwxOSw3LDE5czEtMC4yLDEuNC0wLjZsMy42LTMuNmwzLjYsMy42ICAgQzE2LDE4LjgsMTYuNSwxOSwxNywxOXMxLTAuMiwxLjQtMC42YzAuOC0wLjgsMC44LTIsMC0yLjhMMTQuOCwxMnoiIGlkPSJleGl0Ii8+PC9nPjwvc3ZnPg==' alt="" />
+                        </div>
+                    </div>
                     <p>Общая сумма:<br />{floatToStr(totalAmount)} $</p>
                     <p>Сумма страницы:<br />{floatToStr(pageAmount)} $</p>
                     <div className={`only-waiting ${(filterConfig.statuses.length === 1 && filterConfig.statuses[0] === "waiting") ? "waiting" : ""}`} onClick={() => {
@@ -625,8 +631,48 @@ function TopUps() {
         statuses: [...Object.keys(statuses)],
         currency: [],
         amount: { min: '', max: '', in_usd: true },
+        startDate: '', // Начальная дата
+        endDate: '', // Конечная дата
     })   
     const [modal, setModal] = useState(null)
+
+    const [applyAmountMin, setApplyAmountMin] = useState(''); // Минимум суммы для применения
+    const [applyAmountMax, setApplyAmountMax] = useState(''); // Максимум суммы для применения
+    const [applyStartDate, setApplyStartDate] = useState(''); // Начальная дата для применения
+    const [applyEndDate, setApplyEndDate] = useState(''); // Конечная дата для применения
+
+    // Обработчик нажатия кнопки "Применить"
+    const handleApplyFilters = () => {
+        setFilterConfig((prev) => ({
+            ...prev,
+            amount: {
+                min: applyAmountMin,
+                max: applyAmountMax,
+                in_usd: prev.amount.in_usd,
+            },
+            startDate: applyStartDate,
+            endDate: applyEndDate,
+        }));
+    };
+
+    // Обработчик нажатия кнопки "Сбросить"
+    const handleResetFilters = () => {
+        setFilterConfig({
+            oldTransactions: false,
+            today: false,
+            banks: [...Object.keys(banks)],
+            tags: [],
+            statuses: [...Object.keys(statuses)],
+            currency: [],
+            amount: { min: '', max: '', in_usd: true },
+            startDate: '', // Начальная дата
+            endDate: '', // Конечная дата
+        })
+        setApplyAmountMin('');
+        setApplyAmountMax('');
+        setApplyStartDate('');
+        setApplyEndDate('');
+    }
 
     function sortArrow(field) {
         if (field === sortConfig.field) {
@@ -658,11 +704,18 @@ function TopUps() {
             });
         }
 
-        if (filterConfig.oldTransactions) {
-            const today = new Date().setHours(0, 0, 0, 0); // Текущая дата без учета времени
+        // Фильтр по диапазону дат
+        if (filterConfig.startDate && filterConfig.endDate) {
+            const startDate = new Date(filterConfig.startDate);
+            const endDate = new Date(filterConfig.endDate);
+        
+            // Учитываем конец дня
+            endDate.setDate(endDate.getDate() + 1); // Добавляем один день, чтобы включить всю дату до конца дня
+            endDate.setHours(0); // Устанавливаем время на начало дня
+        
             filtered = filtered.filter((item) => {
-                const itemDate = new Date(item.datetime).setHours(0, 0, 0, 0);
-                return itemDate !== today;
+                const itemDate = new Date(item.datetime);
+                return itemDate >= startDate && itemDate <= endDate; // Меняем оператор <= на <
             });
         }
 
@@ -713,7 +766,16 @@ function TopUps() {
 
         setFilteredTopups(formattedTopups);
 
-    }, [topups, sortConfig, filterConfig, search]);
+    }, [
+        topups,
+        sortConfig,
+        filterConfig,
+        search,
+        applyAmountMin,
+        applyAmountMax,
+        applyStartDate,
+        applyEndDate,
+    ]);
 
     
     const toggleStatus = (status) => {
@@ -735,6 +797,19 @@ function TopUps() {
         
         setActiveModal(!activeModal ? "statusModal" : null); // Открываем модал для выбора статуса
     }
+
+    const [closeIndex, setCloseIndex] = useState(0);
+
+    const handleClose = () => {
+        if (closeIndex === 0) {
+            handleTodayFilter()
+            setCloseIndex(1)
+        }
+        else {
+            handleOldTransactionsFilter()
+            setCloseIndex(0)
+        }
+    }
     const handleTodayFilter = () => {
         setFilterConfig(prev => ({ ...prev, today: true }));
         setFilterConfig(prev => ({...prev, oldTransactions: false }));
@@ -753,70 +828,61 @@ function TopUps() {
                     if (event.target === event.currentTarget) {
                         setModal(null)
                     }
-                }}>
-                    {modal === 'sort' && (
-                        <div className="modal-tab" onClick={(event) => {
-                            if (event.target.className !== 'inactive' && event.target.tagName === 'BUTTON') {
-                                setModal(null);
-                            }
-                        }}>
-                            <h3>Сортировать по:</h3>
-                            <button 
-                            className={filterConfig.today === true ? 'inactive' : ''}
-                            onClick={handleTodayFilter}>Сегодня</button>
-                            <button
-                                className={filterConfig.oldTransactions === true ? 'inactive' : ''}
-                                onClick={handleOldTransactionsFilter}
-                            >Старые</button>
-                            <button
-                                className={sortConfig.field === 'amount' && sortConfig.direction === 'desc' ? 'inactive' : ''}
-                                onClick={() => setSortConfig({ field: 'amount', direction: 'desc', name: 'Сумма больше' })}
-                            >Сумма больше</button>
-                            <button
-                                className={sortConfig.field === 'amount' && sortConfig.direction === 'asc' ? 'inactive' : ''}
-                                onClick={() => setSortConfig({ field: 'amount', direction: 'asc', name: 'Сумма меньше' })}
-                            >Сумма меньше</button>
-                            <button
-                                className={sortConfig.field === 'amount_in_usd' && sortConfig.direction === 'desc' ? 'inactive' : ''}
-                                onClick={() => setSortConfig({ field: 'amount_in_usd', direction: 'desc', name: 'Сумма $ больше' })}
-                            >Сумма $ больше</button>
-                            <button
-                                className={sortConfig.field === 'amount_in_usd' && sortConfig.direction === 'asc' ? 'inactive' : ''}
-                                onClick={() => setSortConfig({ field: 'amount_in_usd', direction: 'asc', name: 'Сумма $ меньше' })}
-                            >Сумма $ меньше</button>
-                        </div>
-                    )}
+                }}>                   
                     {modal === 'filter' && (
                         <div className='modal-tab filter'>
-                            <h3>Сумма</h3>
+                            <h3>Фильтрация по сумме</h3>
                             <div className='amount'>
                                 <div className='checkbox' onClick={() => {
                                     setFilterConfig({ ...filterConfig, amount: { ...filterConfig.amount, in_usd: !filterConfig.amount.in_usd } })
                                 }}>
-                                    {/* <input type="checkbox" checked={filterConfig.amount.in_usd} />
-                                    <p>в долларах</p> */}
                                 </div>
-                                От: <input type="text" className='input-text' value={filterConfig.amount.min} onChange={(event) => {
+                                <input type="text" className='input-text' value={applyAmountMin} placeholder='От' onChange={(event) => {
                                     if (/^(\d*|\d+[,.]\d*)$/.test(event.target.value)) {
-                                        const new_value = event.target.value.replace(/,/, '.')
-                                        setFilterConfig({ ...filterConfig, amount: { ...filterConfig.amount, min: new_value } })
+                                        const newValue = event.target.value.replace(/,/, '.');
+                                        setApplyAmountMin(newValue);
                                     }
-                                }}
-                                /> до : <input type="text" className='input-text' value={filterConfig.amount.max} onChange={(event) => {
-                                    if (/^(\d*|\d+[,.]\d*)$/.test(event.target.value)) {
-                                        const new_value = event.target.value.replace(/,/, '.')
-                                        setFilterConfig({ ...filterConfig, amount: { ...filterConfig.amount, max: new_value } })
-                                    }
-                                }}
-                                />
+                                }} />
+                                <input type="text" className='input-text' value={applyAmountMax} placeholder='До' onChange={(event) => {
+                                        if (/^(\d*|\d+[,.]\d*)$/.test(event.target.value)) {
+                                            const newValue = event.target.value.replace(/,/, '.');
+                                            setApplyAmountMax(newValue);
+                                        }
+                                    }} />
                             </div>
-                            <h3>Дата</h3>
-                            <div className='date_filtr'>
-                                <label for="start-date">С :</label>
-                                <input id="start-date" type="date" name="start_date" defaultValue={new Date().toISOString().split("T")[0]} />
-
-                                <label for="end-date">по :</label>
-                                <input id="end-date" type="date" name="end_date" defaultValue={new Date().toISOString().split("T")[0]} />
+                            <div className="polosa"></div>
+                            <h3>Фильтрация по дате</h3>
+                            <div className="date-filters">
+                                <div className="date_input_box">
+                                    <label htmlFor="start-date">С:</label>
+                                    <input className="date_input"
+                                        id="start-date"
+                                        type="date"
+                                        name="start_date"
+                                        value={applyStartDate}
+                                        onChange={(event) => {
+                                            setApplyStartDate(event.target.value);
+                                        }}
+                                    />
+                                </div>
+                                <div className="date_input_box">
+                                    <label htmlFor="end-date">По:</label>
+                                    <input className="date_input"
+                                        id="end-date"
+                                        type="date"
+                                        name="end_date"
+                                        value={applyEndDate}
+                                        onChange={(event) => {
+                                            setApplyEndDate(event.target.value);
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                            <div className="polosa"></div>
+                            <div className="modul_butto_box">
+                                <button onClick={handleApplyFilters}>Применить</button>
+                                <button onClick={handleResetFilters}>Сбросить</button>
+                                <button onClick={() => setModal(null)}>Закрыть</button>
                             </div>
                         </div>
                     )}
@@ -831,14 +897,28 @@ function TopUps() {
                 onClose={() => setActiveModal(null)} // Закрытие модала, сброс состояния
             />
             <div className='filter_and_sort'>
-                <input type="text" placeholder='Поиск' className='search-input' value={search}
-                    onChange={(e) => setSearch(e.target.value.toLowerCase())} />
-                <button className='sort' onClick={() => setModal('sort')}>
+                <div className="input_box">
+                    <input type="text" placeholder='Поиск' className='search-input' value={search}
+                        onChange={(e) => setSearch(e.target.value.toLowerCase())} />
+                    <div className="clouse_input" onClick={() => setSearch("")}>
+                        <img className="cluse_svg" src='data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/Pjxzdmcgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgMjQgMjQ7IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PGcgaWQ9ImluZm8iLz48ZyBpZD0iaWNvbnMiPjxwYXRoIGQ9Ik0xNC44LDEybDMuNi0zLjZjMC44LTAuOCwwLjgtMiwwLTIuOGMtMC44LTAuOC0yLTAuOC0yLjgsMEwxMiw5LjJMOC40LDUuNmMtMC44LTAuOC0yLTAuOC0yLjgsMCAgIGMtMC44LDAuOC0wLjgsMiwwLDIuOEw5LjIsMTJsLTMuNiwzLjZjLTAuOCwwLjgtMC44LDIsMCwyLjhDNiwxOC44LDYuNSwxOSw3LDE5czEtMC4yLDEuNC0wLjZsMy42LTMuNmwzLjYsMy42ICAgQzE2LDE4LjgsMTYuNSwxOSwxNywxOXMxLTAuMiwxLjQtMC42YzAuOC0wLjgsMC44LTIsMC0yLjhMMTQuOCwxMnoiIGlkPSJleGl0Ii8+PC9nPjwvc3ZnPg==' alt="" />
+                    </div>
+                </div>
+
+
+                {/* <button className='sort' onClick={() => setModal('sort')}>
                     <svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='currentColor'>
                         <path d='M 4.207,-2.798598e-8 0,4.207 1.414,5.621 3.207,3.828 v 10.586 h 2 V 3.828 L 7,5.621 8.414,4.207 Z M 11.207,14.828 7,10.621 8.414,9.207 10.207,11 V 0.41399997 h 2 V 11 L 14,9.207 l 1.414,1.414 z' />
                     </svg>
                     &nbsp;{sortConfig.name}
+                </button> */}
+
+                <button
+                    className='sort'
+                    onClick={handleClose}
+                    style={closeIndex === 1 ? { 'background': '#4f46e5', 'color': '#ffffff' } : null}>Сегодня
                 </button>
+
                 <button className='filter' onClick={() => setModal('filter')}>
                     Фильтры
                 </button>
@@ -888,7 +968,7 @@ function TopUps() {
                                     <td>{i.datetime}</td>
                                     <td>{i.user}</td>
                                     <td className={i.status}>{statusToSvg[i.status]}</td>
-                                    <td>{i.amount_in_usd+' $'}</td>
+                                    <td>{i.amount_in_usd+' ₮'}</td>
                                 </tr>
                             ))
                         }
