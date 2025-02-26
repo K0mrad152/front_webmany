@@ -1411,6 +1411,7 @@ dialog.modal {
         flex-direction: column;
         align-items: center;
         justify-content: center;
+        border: 2px solid #4f46e5;
 
         .checkbox {
           cursor: pointer;
@@ -1694,6 +1695,38 @@ dialog.modal {
   }
 }
 
+.balance {
+  display: flex;
+  justify-content: space-around;
+}
+
+.edit-icon {
+  cursor: pointer;
+}
+
+.balance-input {
+  color: #475569;
+  font-weight: 600;
+}
+
+.diogram_box {
+  width: 100%;
+  height: 75vh;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  color: #475569;
+  font-weight: 600;
+}
+
+.diogram_1 {
+  width: 45%;
+  height: 90%;
+}
+.diogram_2 {
+  width: 45%;
+  height: 90%;
+}
 @keyframes spin {
   0% {
     transform: rotate(0deg);

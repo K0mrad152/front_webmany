@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { axiinstance } from "./config.jsx";
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { floatToStr } from "./utils.jsx";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import moment from 'moment';
 import ChoiceModal from "./components.jsx";
+import BalanceEditModal from "./CompBalansModul.jsx";
 
 const banks = {
     'tbank': 'ТБанк (Тинькофф)',
@@ -47,6 +50,9 @@ const statusToSvg = {
 }
 
 
+
+
+
 let notificationTimer
 
 function Auth() {
@@ -76,6 +82,19 @@ function Auth() {
 }
 
 function Stats() {
+
+    const generateRandomProfitData = (daysCount) => {
+        const result = [];
+        for (let i = 0; i < daysCount; i++) {
+          const date = moment().subtract(i, 'days').format('DD.MM'); // Формат даты: 'ДД.ММ'
+          const прибыль = Math.floor(Math.random() * 50000 + 10000); // Прибыль от 10 000 до 60 000 рублей
+          result.unshift({ date, прибыль });
+        }
+        return result;
+      };
+      
+      const data = generateRandomProfitData(7); // Генерируем данные за последние 7 дней
+
     return (
         <div className='stats'>
             <div className='info-list'>
@@ -96,6 +115,45 @@ function Stats() {
                     <p className='value'>0</p>
                 </div>
             </div>
+            <div className="diogram_box">
+                <div className="diogram_1">
+                    <p>Статистика по выплатам</p>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={data}>
+                            <defs>
+                                <linearGradient id="colorTemperature" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
+                                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="date" />
+                            <YAxis />
+                            <Tooltip formatter={(value) => `${value} руб.`} />
+                            <Area type="monotone" dataKey="прибыль" stroke="#8884d8" fill="url(#colorTemperature)" />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
+                <div className="diogram_2">
+                <p>Статистика по депозитам</p>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={data}>
+                            <defs>
+                                <linearGradient id="colorTemperature" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
+                                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="date" />
+                            <YAxis />
+                            <Tooltip formatter={(value) => `${value} руб.`} />
+                            <Area type="monotone" dataKey="прибыль" stroke="#8884d8" fill="url(#colorTemperature)" />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+            
         </div>
     )
 }
@@ -980,8 +1038,11 @@ function TopUps() {
 }
 
 function Users() {
-    const [users, setUsers] = useState([]);
-    const [filteredUsers, setFilteredUsers] = useState([]);
+    const [users, setUsers] = useState([]); // Массив пользователей
+    const [filteredUsers, setFilteredUsers] = useState([]); // Фильтрованный массив пользователей
+    const [showEditModal, setShowEditModal] = useState(false); // Управление видимостью модального окна
+    const [editingUserId, setEditingUserId] = useState(null); // ID пользователя, чей баланс редактируется
+    const [editingPosition, setEditingPosition] = useState({ top: 0, left: 0 }); // Позиция модального окна
 
     useEffect(() => {
         async function getUsers() {
@@ -1006,26 +1067,64 @@ function Users() {
 
     }, [users])
 
+    const editIcon = (event, userName) => {
+        event.preventDefault(); // Предотвращаем стандартное поведение
+        setEditingUserId(userName); // Устанавливаем ID пользователя для редактирования
+        setEditingPosition({ top: event.clientY, left: event.clientX }); // Устанавливаем позицию модального окна
+        setShowEditModal(true); // Показываем модальное окно
+    };
+
+    const saveBalance = (newBalance) => {
+        // Логика обновления баланса пользователя с ID editingUserId
+        const updatedUsers = users.map((user) =>
+            user.name === editingUserId ? { ...user, balance: newBalance } : user
+        );
+        setUsers(updatedUsers); // Обновляем массив пользователей
+        setShowEditModal(false); // Скрываем модальное окно после сохранения
+    };
+
     return (
         <div className='users'>
+            {showEditModal && (
+                <BalanceEditModal
+                    isVisible={showEditModal}
+                    position={editingPosition}
+                    balance={
+                        users.find((user) => user.name === editingUserId)?.balance ?? 0
+                    }
+                    onSave={saveBalance}
+                    onClose={() => setShowEditModal(false)}
+                />
+            )}
             <div className='table'>
                 <table>
                     <thead>
                         <tr>
                             <th>Дата регистрации</th>
                             <th>Имя</th>
-                            <th>Username</th>
+                            <th>Username tg</th>
                             <th>Баланс</th>
+                            <th>Статистика</th>
+                            <th>Наставник</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredUsers.length > 0 &&
                             filteredUsers.map((i) => (
-                                <tr key={i.id}>
+                                <tr key={i.name}>
                                     <td>{i.datetime}</td>
                                     <td>{i.name}</td>
-                                    <td>{i.username}</td>
-                                    <td>{i.balance}</td>
+                                    <td><a href={`tg://resolve?domain=${i.username}`}>@{i.username}</a></td>
+                                    <td className="balance">{i.balance}
+                                    <div
+                                            className="edit-icon"
+                                            onClick={(event) => editIcon(event, i.name)}
+                                        >
+                                            {correctionSvg}
+                                        </div>
+                                    </td>
+                                    <td></td>
+                                    <td></td>
                                 </tr>
                             ))
                         }
