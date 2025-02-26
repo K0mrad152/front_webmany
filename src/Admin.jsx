@@ -82,44 +82,168 @@ function Auth() {
 }
 
 function Stats() {
-
-    const generateRandomProfitData = (daysCount) => {
-        const result = [];
-        for (let i = 0; i < daysCount; i++) {
-          const date = moment().subtract(i, 'days').format('DD.MM'); // Формат даты: 'ДД.ММ'
-          const прибыль = Math.floor(Math.random() * 50000 + 10000); // Прибыль от 10 000 до 60 000 рублей
-          result.unshift({ date, прибыль });
+    const [topups, setTopups] = useState([]);
+    const [summary, setSummary] = useState([])
+    const [withdraws, setWithdraws] = useState(
+        {
+            meta: {
+                page: 1,
+                limit: 200,
+                total_withdraws: 100,
+                total_pages: 1,
+                total_amount: 1028.8959198283212,
+                page_amount: 1028.8959198283212,
+                banks: {
+                    tbank: "ТБанк (Тинькофф)",
+                    sber: "Сбер",
+                    alfa: "Альфа"
+                }
+            },
+            withdraws: []
         }
-        return result;
-      };
-      
-      const data = generateRandomProfitData(7); // Генерируем данные за последние 7 дней
+    );
+    const [withdrawsSummary, setWithdrawsSummary] = useState([])
+
+    useEffect(() => {
+        async function getTopups() {
+            const response = await axiinstance.get('/admin/topups/');
+            if (response.data) {
+                setTopups(response.data);
+            }
+        }
+        getTopups()
+    }, []);
+
+    useEffect(() => {
+        // Создаём объект для хранения промежуточных результатов
+        let tempSummary = {};
+
+        // Проходим по всем транзакциям
+        topups.filter((transaction) => transaction.status === 'completed')
+        .forEach((transaction) => {
+            // Извлекаем дату из поля datetime
+            const date = transaction.datetime.slice(0, 10); // Берём первые 10 символов, чтобы получить дату в формате YYYY-MM-DD
+
+            // Проверяем, существует ли запись для данной даты
+            if (!tempSummary[date]) {
+                // Если нет, создаем новую запись
+                tempSummary[date] = {
+                    day: date.slice(8, 10) + '.' + date.slice(5, 7), // Форматируем дату в виде 'ДД.ММ'
+                    прибыль: 0
+                };
+            }
+
+            // Суммируем значения amount_in_usd для текущей даты
+            tempSummary[date].прибыль += transaction.amount_in_usd;
+        });
+        // Округляем значения profit до целых чисел
+        const roundedSummary = Object.values(tempSummary).map(item => ({
+            ...item,
+            прибыль: Math.round(item.прибыль)
+        }));
+        // Сохраняем в состояние
+        setSummary(roundedSummary);
+    }, [topups])
+
+    useEffect(() => {
+        async function getWithdraws() {
+            try {
+                const response = await axiinstance.get('/admin/withdraws/', {
+                    params: {
+                        page: 1,
+                        limit: 200,
+                        statuses: ["completed"],
+                        banks: [
+                            "tbank",
+                            "sber",
+                            "alfa"
+                        ],
+                        sort_by: "datetime",
+                        order: "desc",
+                    },
+                });
+
+                if (response.data) {
+                    setWithdraws(response.data);
+                } else {
+                    setWithdraws([]);
+                }
+            } catch (error) {
+                console.error("Error fetching withdraws:", error);
+                setWithdraws([]);
+            }
+        }
+        getWithdraws()
+    },[])
+
+    useEffect(() => {
+        // Создаём объект для хранения промежуточных результатов
+        let tempSummary = {};
+
+        // Проходим по всем транзакциям
+        withdraws.withdraws.forEach((transaction) => {
+            // Извлекаем дату из поля datetime
+            const date = new Date(transaction.datetime * 1000).toISOString().slice(0, 10); // Берём первые 10 символов, чтобы получить дату в формате YYYY-MM-DD
+
+            // Проверяем, существует ли запись для данной даты
+            if (!tempSummary[date]) {
+                // Если нет, создаем новую запись
+                tempSummary[date] = {
+                    day: date.slice(8, 10) + '.' + date.slice(5, 7), // Форматируем дату в виде 'ДД.ММ'
+                    прибыль: 0
+                };
+            }
+
+            // Суммируем значения amount_in_usd для текущей даты
+            tempSummary[date].прибыль += transaction.amount;
+        });
+        // Округляем значения profit до целых чисел
+        const roundedSummary = Object.values(tempSummary).map(item => ({
+            ...item,
+            прибыль: Math.round(item.прибыль)
+        }));
+        // Сохраняем в состояние
+        setWithdrawsSummary(roundedSummary);
+    }, [withdraws.withdraws])
+
+    function calculateTotalProfit(summary) {
+        return summary.reduce((acc, item) => acc + item.amount, 0);
+    }
+
+    const totalProfit = calculateTotalProfit(withdraws.withdraws);
+
+    function colvo(summary) {
+        return summary.length
+    }
+
+    const col = colvo(withdraws.withdraws);
+    console.log(col)
 
     return (
         <div className='stats'>
             <div className='info-list'>
                 <div className='info'>
                     <p className='title'>Сумма выплат</p>
-                    <p className='value'>0</p>
+                    <p className='value'>{withdraws.meta.total_amount.toFixed(2)} $</p>
                 </div>
                 <div className='info'>
                     <p className='title'>Сумма комиссий</p>
-                    <p className='value'>0</p>
+                    <p className='value'>0 ₽</p>
                 </div>
                 <div className='info'>
                     <p className='title'>Заявки в ожидании</p>
-                    <p className='value'>0</p>
+                    <p className='value'>0 (0 ₽)</p>
                 </div>
                 <div className='info'>
                     <p className='title'>Выполненные заявки</p>
-                    <p className='value'>0</p>
+                    <p className='value'>{col} ({totalProfit.toFixed(2)} ₽)</p>
                 </div>
             </div>
             <div className="diogram_box">
                 <div className="diogram_1">
                     <p>Статистика по выплатам</p>
                     <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={data}>
+                        <AreaChart data={withdrawsSummary}>
                             <defs>
                                 <linearGradient id="colorTemperature" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
@@ -127,7 +251,7 @@ function Stats() {
                                 </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="date" />
+                            <XAxis dataKey="day" />
                             <YAxis />
                             <Tooltip formatter={(value) => `${value} руб.`} />
                             <Area type="monotone" dataKey="прибыль" stroke="#8884d8" fill="url(#colorTemperature)" />
@@ -137,7 +261,7 @@ function Stats() {
                 <div className="diogram_2">
                 <p>Статистика по депозитам</p>
                     <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={data}>
+                        <AreaChart data={summary}>
                             <defs>
                                 <linearGradient id="colorTemperature" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
@@ -145,7 +269,7 @@ function Stats() {
                                 </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="date" />
+                            <XAxis dataKey="day" />
                             <YAxis />
                             <Tooltip formatter={(value) => `${value} руб.`} />
                             <Area type="monotone" dataKey="прибыль" stroke="#8884d8" fill="url(#colorTemperature)" />
@@ -1402,7 +1526,7 @@ export default function Admin() {
                         <button
                             className={`label currencies ${activeLabel === 'currencies' ? 'active' : ''}`}
                             onClick={() => { changeLabel('currencies') }}
-                        >Валюты</button>
+                        >Настройки</button>
                     </div>
                     <div className='tab'>
                         <Routes>
