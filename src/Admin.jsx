@@ -1,17 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { axiinstance } from "./config.jsx";
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { floatToStr } from "./utils.jsx";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import axios from "axios";
 import moment from 'moment';
 import ChoiceModal from "./components.jsx";
 import BalanceEditModal from "./CompBalansModul.jsx";
+import StatusEditModal from "./StatusModu.jsx";
 
-const banks = {
-    'tbank': 'ТБанк (Тинькофф)',
-    'sber': 'Сбер',
-    'alfa': 'Альфа'
-}
+
+
 
 
 const fullscreenEnterSvg = 'M18.5,5.5 L16,5.5 C15.1716,5.5 14.5,4.82843 14.5,4 C14.5,3.17157 15.1716,2.5 16,2.5 L19,2.5 C20.3807,2.5 21.5,3.61929 21.5,5 L21.5,8 C21.5,8.82843 20.8284,9.5 20,9.5 C19.1716,9.5 18.5,8.82843 18.5,8 L18.5,5.5 Z M8,5.5 L5.5,5.5 L5.5,8 C5.5,8.82843 4.82843,9.5 4,9.5 C3.17157,9.5 2.5,8.82843 2.5,8 L2.5,5 C2.5,3.61929 3.61929,2.5 5,2.5 L8,2.5 C8.82843,2.5 9.5,3.17157 9.5,4 C9.5,4.82843 8.82843,5.5 8,5.5 Z M8,18.5 L5.5,18.5 L5.5,16 C5.5,15.1716 4.82843,14.5 4,14.5 C3.17157,14.5 2.5,15.1716 2.5,16 L2.5,19 C2.5,20.3807 3.61929,21.5 5,21.5 L8,21.5 C8.82843,21.5 9.5,20.8284 9.5,20 C9.5,19.1716 8.82843,18.5 8,18.5 Z M16,18.5 L18.5,18.5 L18.5,16 C18.5,15.1716 19.1716,14.5 20,14.5 C20.8284,14.5 21.5,15.1716 21.5,16 L21.5,19 C21.5,20.3807 20.3807,21.5 19,21.5 L16,21.5 C15.1716,21.5 14.5,20.8284 14.5,20 C14.5,19.1716 15.1716,18.5 16,18.5 Z'
@@ -83,148 +82,319 @@ function Auth() {
 
 function Stats() {
     const [topups, setTopups] = useState([]);
-    const [summary, setSummary] = useState([])
+    const [summary, setSummary] = useState([]);
+    const [modal, setModal] = useState(null);
     const [withdraws, setWithdraws] = useState(
         {
             meta: {
-                page: 1,
-                limit: 200,
-                total_withdraws: 100,
-                total_pages: 1,
-                total_amount: 1028.8959198283212,
-                page_amount: 1028.8959198283212,
-                banks: {
-                    tbank: "ТБанк (Тинькофф)",
-                    sber: "Сбер",
-                    alfa: "Альфа"
-                }
+                usdt_total_amount: 0,
             },
             withdraws: []
         }
     );
-    const [withdrawsSummary, setWithdrawsSummary] = useState([])
+    const [withdrawsSummary, setWithdrawsSummary] = useState([]);
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [startDateA, setStartDateA] = useState('');
+    const [endDateA, setEndDateA] = useState('');
+    const [lengWithdraws, setLengthWithdraws] = useState(0);
+    const [lengTopups, setLengthTopups] = useState(0);
+    const [lengWithdrawsSummary, setLengthWithdrawsSummary] = useState(0);
+    const [totalWaiting, setTotalWaiting,] = useState();
+    const [curs, setCurs] = useState(0);
 
     useEffect(() => {
-        async function getTopups() {
-            const response = await axiinstance.get('/admin/topups/');
-            if (response.data) {
-                setTopups(response.data);
-            }
-        }
-        getTopups()
-    }, []);
-
-    useEffect(() => {
-        // Создаём объект для хранения промежуточных результатов
-        let tempSummary = {};
-
-        // Проходим по всем транзакциям
-        topups.filter((transaction) => transaction.status === 'completed')
-        .forEach((transaction) => {
-            // Извлекаем дату из поля datetime
-            const date = transaction.datetime.slice(0, 10); // Берём первые 10 символов, чтобы получить дату в формате YYYY-MM-DD
-
-            // Проверяем, существует ли запись для данной даты
-            if (!tempSummary[date]) {
-                // Если нет, создаем новую запись
-                tempSummary[date] = {
-                    day: date.slice(8, 10) + '.' + date.slice(5, 7), // Форматируем дату в виде 'ДД.ММ'
-                    прибыль: 0
-                };
-            }
-
-            // Суммируем значения amount_in_usd для текущей даты
-            tempSummary[date].прибыль += transaction.amount_in_usd;
-        });
-        // Округляем значения profit до целых чисел
-        const roundedSummary = Object.values(tempSummary).map(item => ({
-            ...item,
-            прибыль: Math.round(item.прибыль)
-        }));
-        // Сохраняем в состояние
-        setSummary(roundedSummary);
-    }, [topups])
-
-    useEffect(() => {
-        async function getWithdraws() {
+        async function getCurs() {
             try {
-                const response = await axiinstance.get('/admin/withdraws/', {
-                    params: {
-                        page: 1,
-                        limit: 200,
-                        statuses: ["completed"],
-                        banks: [
-                            "tbank",
-                            "sber",
-                            "alfa"
-                        ],
-                        sort_by: "datetime",
-                        order: "desc",
-                    },
-                });
+                const response = await axios.get('https://www.binance.com/bapi/asset/v1/public/asset-service/product/currency');
 
                 if (response.data) {
-                    setWithdraws(response.data);
+                    response.data.data.forEach((item) => {
+                        if (item.pair === 'RUB_USD') {
+                            setCurs(item.rate);
+                        }
+                    })
+                    getTopups()
+                    getWithdraws()
                 } else {
-                    setWithdraws([]);
+                    setCurs(0);
                 }
             } catch (error) {
                 console.error("Error fetching withdraws:", error);
-                setWithdraws([]);
+                setCurs(0);
             }
         }
-        getWithdraws()
-    },[])
+        getCurs()
+    }, [])
+
+    async function getTopups() {
+        const response = await axiinstance.get('/admin/topups/', {
+            params: {
+                page: 1,
+                limit: 200,
+                sort_by: "datetime",
+                order: "desc",
+            },
+        });
+        if (response.data) {
+            setTopups(response.data.result.topups);
+        }
+    }
+
+    async function getWithdraws() {
+        try {
+            const response = await axiinstance.get('/admin/withdraws/', {
+                params: {
+                    page: 1,
+                    limit: 200,
+                    sort_by: "datetime",
+                    order: "desc",
+                },
+            });
+
+            if (response.data) {
+                setWithdraws(response.data.result);
+            } else {
+                setWithdraws([]);
+            }
+        } catch (error) {
+            console.error("Error fetching withdraws:", error);
+            setWithdraws([]);
+        }
+    }
 
     useEffect(() => {
         // Создаём объект для хранения промежуточных результатов
         let tempSummary = {};
 
+        // Счетчик количества транзакций
+        let transactionCount = 0;
+
         // Проходим по всем транзакциям
-        withdraws.withdraws.forEach((transaction) => {
-            // Извлекаем дату из поля datetime
-            const date = new Date(transaction.datetime * 1000).toISOString().slice(0, 10); // Берём первые 10 символов, чтобы получить дату в формате YYYY-MM-DD
+        topups.forEach((transaction) => {
+            // Извлечение даты из поля datetime
+            const dateString = transaction.datetime.slice(0, 10); // Получение строки формата 'YYYY-MM-DD'
 
-            // Проверяем, существует ли запись для данной даты
-            if (!tempSummary[date]) {
-                // Если нет, создаем новую запись
-                tempSummary[date] = {
-                    day: date.slice(8, 10) + '.' + date.slice(5, 7), // Форматируем дату в виде 'ДД.ММ'
-                    прибыль: 0
-                };
+            // Определяем, нужно ли применять фильтрацию по дате
+            const applyFilter = startDateA !== '' && endDateA !== '';
+
+
+            // Применяем фильтрацию, если она необходима
+            if (
+                (!applyFilter || (dateString >= startDateA && dateString <= endDateA))
+            ) {
+
+                transactionCount++; // Увеличение счетчика
+
+                // Создание записи для новой даты, если её ещё нет
+                if (!tempSummary[dateString]) {
+                    tempSummary[dateString] = {
+                        day: `${dateString.slice(8, 10)}.${dateString.slice(5, 7)}`, // Формат 'ДД.ММ'
+                        депозит: 0
+                    };
+                }
+
+                // Суммирование прибыли для текущей даты
+                tempSummary[dateString].депозит += transaction.usdt_amount;
             }
-
-            // Суммируем значения amount_in_usd для текущей даты
-            tempSummary[date].прибыль += transaction.amount;
         });
         // Округляем значения profit до целых чисел
         const roundedSummary = Object.values(tempSummary).map(item => ({
             ...item,
-            прибыль: Math.round(item.прибыль)
+            депозит: Math.round(item.депозит * curs * 100) / 100
         }));
         // Сохраняем в состояние
+        setSummary(roundedSummary);
+        setLengthTopups(transactionCount);
+    }, [topups, startDateA, endDateA])
+
+    useEffect(() => {
+        // Объект для хранения промежуточных результатов
+        let tempSummary = {};
+
+        // Счетчик количества транзакций
+        let transactionCount = 0;
+
+        // Проход по всем транзакциям
+        withdraws.withdraws.forEach((transaction) => {
+            // Извлечение даты из поля datetime
+            const dateString = transaction.datetime.slice(0, 10); // Получение строки формата 'YYYY-MM-DD'
+
+            // Определяем, нужно ли применять фильтрацию по дате
+            const applyFilter = startDate !== '' && endDate !== '';
+
+            const totalAmountWaiting = calculateTotalAmountByStatus(withdraws.withdraws, 'waiting');
+
+            setTotalWaiting(totalAmountWaiting.toFixed(2));
+
+
+            // Применяем фильтрацию, если она необходима
+            if (
+                (!applyFilter || (dateString >= startDate && dateString <= endDate)) &&
+                transaction.status === 'completed' // Добавлено условие по статусу
+            ) {
+
+                transactionCount++; // Увеличение счетчика
+
+                // Создание записи для новой даты, если её ещё нет
+                if (!tempSummary[dateString]) {
+                    tempSummary[dateString] = {
+                        day: `${dateString.slice(8, 10)}.${dateString.slice(5, 7)}`, // Формат 'ДД.ММ'
+                        выплата: 0
+                    };
+                }
+
+                // Суммирование прибыли для текущей даты
+                tempSummary[dateString].выплата += transaction.usdt_amount;
+            }
+        });
+
+        // Округление значений прибыли до целых чисел
+        const roundedSummary = Object.values(tempSummary).map(item => ({
+            ...item,
+            выплата: Math.round(item.выплата * curs * 100) / 100
+        }));
+
+        // Сохранение результата в состояние
         setWithdrawsSummary(roundedSummary);
-    }, [withdraws.withdraws])
+        setLengthWithdraws(transactionCount);
+    }, [withdraws.withdraws, startDate, endDate]);
 
     function calculateTotalProfit(summary) {
-        return summary.reduce((acc, item) => acc + item.amount, 0);
+        return summary.reduce((acc, item) => acc + item.выплата, 0);
     }
 
-    const totalProfit = calculateTotalProfit(withdraws.withdraws);
+    const totalProfit = calculateTotalProfit(withdrawsSummary);
 
-    function colvo(summary) {
-        return summary.length
+    function calculateTotalTopup(summary) {
+        return summary.reduce((acc, item) => acc + item.депозит, 0);
     }
 
-    const col = colvo(withdraws.withdraws);
-    console.log(col)
+    const totalTopup = calculateTotalTopup(summary);
+
+    // Функция для суммирования amount по статусу 'waiting'
+    const calculateTotalAmountByStatus = (transactions, status) => {
+        let transactionCountWaiting = 0;
+        return transactions.reduce((total, transaction) => {
+            if (transaction.status === status) {
+                total += (transaction.usdt_amount * curs * 100) / 100;
+                transactionCountWaiting++
+            }
+            setLengthWithdrawsSummary(transactionCountWaiting)
+            return total;
+        }, 0);
+    };
 
     return (
         <div className='stats'>
+            {modal && (
+                <div className='modal' onClick={(event) => {
+                    if (event.target === event.currentTarget) {
+                        setModal(null)
+                    }
+                }}>
+                    {modal === 'filter_payments' && (
+                        <div className='modal-tab filter'>
+                            <h3>Периуд выплат</h3>
+                            <div className="date-filters">
+                                <div className="date_input_box">
+                                    <label htmlFor="start-date">С:</label>
+                                    <input className="date_input"
+                                        id="start-date"
+                                        type="date"
+                                        name="start_date"
+                                        value={startDate}
+                                        onChange={(event) => {
+                                            setStartDate(event.target.value);
+                                        }}
+                                    />
+                                </div>
+                                <div className="date_input_box">
+                                    <label htmlFor="end-date">По:</label>
+                                    <input className="date_input"
+                                        id="end-date"
+                                        type="date"
+                                        name="end_date"
+                                        value={endDate}
+                                        onChange={(event) => {
+                                            setEndDate(event.target.value);
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                            <div className="payments">
+                                <div>
+                                    <h3>Сумма комиссии</h3>
+                                    <p>10 000 ₽</p>
+                                </div>
+                                <div>
+                                    <h3>Количество выплат</h3>
+                                    <p>{lengWithdraws}</p>
+                                </div>
+                            </div>
+                            <div className="modul_butto_box">
+                                <button onClick={() => {
+                                    setStartDate('');
+                                    setEndDate('');
+                                }} >Сбросить</button>
+                                <button onClick={() => setModal(null)}>Закрыть</button>
+                            </div>
+                        </div>
+                    )}
+                    {modal === 'filter_deposits' && (
+                        <div className='modal-tab filter'>
+                            <h3>Периуд внесения депозитов</h3>
+                            <div className="date-filters">
+                                <div className="date_input_box">
+                                    <label htmlFor="start-date">С:</label>
+                                    <input className="date_input"
+                                        id="start-date"
+                                        type="date"
+                                        name="start_date"
+                                        value={startDateA}
+                                        onChange={(event) => {
+                                            setStartDateA(event.target.value);
+                                        }}
+                                    />
+                                </div>
+                                <div className="date_input_box">
+                                    <label htmlFor="end-date">По:</label>
+                                    <input className="date_input"
+                                        id="end-date"
+                                        type="date"
+                                        name="end_date"
+                                        value={endDateA}
+                                        onChange={(event) => {
+                                            setEndDateA(event.target.value);
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                            <div className="payments">
+                                <div>
+                                    <h3>Сумма депозитов</h3>
+                                    <p>{floatToStr(totalTopup)} ₮</p>
+                                </div>
+                                <div>
+                                    <h3>Количество депозитов</h3>
+                                    <p>{lengTopups}</p>
+                                </div>
+                            </div>
+                            <div className="modul_butto_box">
+                                <button onClick={() => {
+                                    setStartDateA('');
+                                    setEndDateA('');
+                                }} >Сбросить</button>
+                                <button onClick={() => setModal(null)}>Закрыть</button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
             <div className='info-list'>
                 <div className='info'>
                     <p className='title'>Сумма выплат</p>
-                    <p className='value'>{withdraws.meta.total_amount.toFixed(2)} $</p>
+                    <p className='value'>{floatToStr((withdraws.meta.usdt_total_amount * curs).toFixed(2))} ₽ ({floatToStr((withdraws.meta.usdt_total_amount).toFixed(2))} ₮)</p>
                 </div>
                 <div className='info'>
                     <p className='title'>Сумма комиссий</p>
@@ -232,52 +402,65 @@ function Stats() {
                 </div>
                 <div className='info'>
                     <p className='title'>Заявки в ожидании</p>
-                    <p className='value'>0 (0 ₽)</p>
+                    <p className='value'>{lengWithdrawsSummary} <span style={{ 'font-weight': '500' }}>({floatToStr(totalWaiting)} ₽) ({floatToStr(totalWaiting / curs)} ₮)</span></p>
                 </div>
                 <div className='info'>
                     <p className='title'>Выполненные заявки</p>
-                    <p className='value'>{col} ({totalProfit.toFixed(2)} ₽)</p>
+                    <p className='value'>{lengWithdraws} <span style={{ 'font-weight': '500' }}>({floatToStr(totalProfit)} ₽) ({floatToStr(totalProfit / curs)} ₮)</span></p>
                 </div>
             </div>
             <div className="diogram_box">
                 <div className="diogram_1">
-                    <p>Статистика по выплатам</p>
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={withdrawsSummary}>
-                            <defs>
-                                <linearGradient id="colorTemperature" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
-                                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="day" />
-                            <YAxis />
-                            <Tooltip formatter={(value) => `${value} руб.`} />
-                            <Area type="monotone" dataKey="прибыль" stroke="#8884d8" fill="url(#colorTemperature)" />
-                        </AreaChart>
-                    </ResponsiveContainer>
+                    <div className="diogram_box_top">
+                        <p>Статистика по выплатам</p>
+                        <div className="filter_btn" onClick={() => setModal('filter_payments')}>
+                            <svg fill="none" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M3 4C3 3.44772 3.44772 3 4 3H20C20.5523 3 21 3.44772 21 4V6.58579C21 6.851 20.8946 7.10536 20.7071 7.29289L14.2929 13.7071C14.1054 13.8946 14 14.149 14 14.4142V17L10 21V14.4142C10 14.149 9.89464 13.8946 9.70711 13.7071L3.29289 7.29289C3.10536 7.10536 3 6.851 3 6.58579V4Z" stroke="#4A5568" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" /></svg>
+                        </div>
+                    </div>
+                    <div className="diograma_box">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={withdrawsSummary}>
+                                <defs>
+                                    <linearGradient id="colorTemperature" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
+                                        <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="day" reversed="true" />
+                                <YAxis type="number" dataKey="выплата" />
+                                <Tooltip formatter={(e) => `${floatToStr(e)} ₽ (${floatToStr(e / curs)} ₮)`} />
+                                <Area type="monotone" dataKey="выплата" stroke="#8884d8" fill="url(#colorTemperature)" />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
                 <div className="diogram_2">
-                <p>Статистика по депозитам</p>
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={summary}>
-                            <defs>
-                                <linearGradient id="colorTemperature" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
-                                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="day" />
-                            <YAxis />
-                            <Tooltip formatter={(value) => `${value} руб.`} />
-                            <Area type="monotone" dataKey="прибыль" stroke="#8884d8" fill="url(#colorTemperature)" />
-                        </AreaChart>
-                    </ResponsiveContainer>
+                    <div className="diogram_box_top">
+                        <p>Статистика по депозитам</p>
+                        <div className="filter_btn" onClick={() => setModal('filter_deposits')}>
+                            <svg fill="none" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M3 4C3 3.44772 3.44772 3 4 3H20C20.5523 3 21 3.44772 21 4V6.58579C21 6.851 20.8946 7.10536 20.7071 7.29289L14.2929 13.7071C14.1054 13.8946 14 14.149 14 14.4142V17L10 21V14.4142C10 14.149 9.89464 13.8946 9.70711 13.7071L3.29289 7.29289C3.10536 7.10536 3 6.851 3 6.58579V4Z" stroke="#4A5568" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" /></svg>
+                        </div>
+                    </div>
+                    <div className="diograma_box">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={summary}>
+                                <defs>
+                                    <linearGradient id="colorTemperature" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
+                                        <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="day" reversed="true" />
+                                <YAxis />
+                                <Tooltip formatter={(e) => `${floatToStr(e)} ₽ (${floatToStr(e / curs)} ₮)`} />
+                                <Area type="monotone" dataKey="депозит" stroke="#8884d8" fill="url(#colorTemperature)" />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
             </div>
-            
         </div>
     )
 }
@@ -285,12 +468,16 @@ function Stats() {
 function Withdraws() {
     const [activeModal, setActiveModal] = useState(null); // 'null' - нет активного модала
     const [modalPosition, setModalPosition] = useState({ top: 0, left: 0 }); // Позиция модала
-
+    const [users, setUsers] = useState([]);
+    const [bank, setBanks] = useState([]);
     const [withdraws, setWithdraws] = useState([]);
+    const [banks, setBanksis] = useState([]);
+    const [bankName, setBankName] = useState([]);
+
     const [filteredWithdraws, setFilteredWithdraws] = useState([]);
     const [sortConfig, setSortConfig] = useState({ field: 'datetime', direction: 'desc', name: 'Новые' })
     const [filterConfig, setFilterConfig] = useState({
-        banks: [...Object.keys(banks)],
+        bank_ids: [...Object.keys(banks)],
         statuses: [...Object.keys(statuses)],
     })
     const [inputTagId, setInputTagId] = useState(null)
@@ -314,12 +501,22 @@ function Withdraws() {
 
     const [search, setSearch] = useState('');
 
+    const userIds = [...new Set(filteredWithdraws.map(withdraws => withdraws.user_id))];
+    const filteredUsers = users.filter(user => userIds.includes(user.id));
+    const banksIds = [...new Set(filteredWithdraws.map(withdraws => withdraws.bank_id))];
+    const filteredBanks = bank.filter(banks => banksIds.includes(banks.id));
+    const [statusId, setStatusId] = useState(null)
+    
+    const [curs, setCurs] = useState(0);
+    const [currencies, setCurrencies] = useState([]);
+
+
     const toggleBank = (bank) => {
         setFilterConfig((prev) => ({
             ...prev,
-            banks: prev.banks.includes(bank)
-                ? (prev.banks.length > 1 ? prev.banks.filter((b) => b !== bank) : [...prev.banks])
-                : [...prev.banks, bank],
+            bank_ids: prev.bank_ids.includes(bank)
+                ? (prev.bank_ids.length > 1 ? prev.bank_ids.filter((b) => b !== bank) : [...prev.bank_ids])
+                : [...prev.bank_ids, bank],
         }));
     };
 
@@ -379,6 +576,17 @@ function Withdraws() {
         setActiveModal(!activeModal ? "statusModal" : null); // Открываем модал для выбора статуса
     }
 
+    function handleStatusEditClick(event, id) {
+        const buttonRect = event.target.getBoundingClientRect();
+        setStatusId(id)
+        setModalPosition({
+            top: buttonRect.bottom + window.scrollY + 5,
+            left: buttonRect.left + window.scrollX,
+        });
+
+        setActiveModal(!activeModal ? "statusEditModal" : null); // Открываем модал для выбора банков
+    }
+
     function sortArrow(field) {
         if (field === sortConfig.field) {
             return sortConfig.direction === 'asc' ? ' ↓' : ' ↑';
@@ -388,8 +596,8 @@ function Withdraws() {
 
     async function save_tag(id, tag) {
         try {
-            await axiinstance.patch('/admin/withdraw/update_tag/', { tag: tag, id: id })
-            setWithdraws(withdraws.map(item =>
+            await axiinstance.patch('/admin/withdraw/' + id + '/', { tag: tag })
+            setFilteredWithdraws(filteredWithdraws.map(item =>
                 item.id === id
                     ? { ...item, tag: tag }
                     : item
@@ -402,8 +610,9 @@ function Withdraws() {
 
     function savePhone(id) {
         const foundItem = filteredWithdraws.find(item => item.id === id);
-        const htmlToSave = `<strong>${banks[foundItem.bank]}</strong><br>${foundItem.phone}<br>${foundItem.receiver || 'Пусто'}<br>${foundItem.amount}`;
-        const plainTextToSave = `${banks[foundItem.bank]}\n${foundItem.phone}\n${foundItem.receiver || 'Пусто'}\n${foundItem.amount}`;
+        const htmlToSave = `<strong><br>${foundItem.phone}<br>${foundItem.receiver || 'Пусто'}<br>${foundItem.amount}</strong>`;
+        const plainTextToSave = `${foundItem.phone}\n${foundItem.receiver || 'Пусто'}\n${foundItem.amount}`;
+        console.log(plainTextToSave)
 
         const clipboardItem = new ClipboardItem({
             'text/html': new Blob([htmlToSave], { type: 'text/html' }),
@@ -417,8 +626,8 @@ function Withdraws() {
 
     function saveCard(id) {
         const foundItem = filteredWithdraws.find(item => item.id === id);
-        const htmlToSave = `<strong>${banks[foundItem.bank]}</strong><br>${foundItem.card}<br>${foundItem.receiver || 'Пусто'}<br>${foundItem.amount}`;
-        const plainTextToSave = `${banks[foundItem.bank]}\n${foundItem.card}\n${foundItem.receiver || 'Пусто'}\n${foundItem.amount}`;
+        const htmlToSave = `<strong><br>${foundItem.card}<br>${foundItem.receiver || 'Пусто'}<br>${foundItem.amount}</strong>`;
+        const plainTextToSave = `${foundItem.card}\n${foundItem.receiver || 'Пусто'}\n${foundItem.amount}`;
 
         const clipboardItem = new ClipboardItem({
             'text/html': new Blob([htmlToSave], { type: 'text/html' }),
@@ -459,8 +668,61 @@ function Withdraws() {
 
     }
 
+    useEffect(() => {
+        async function getCurrencies() {
+            const response = await axiinstance.get('/admin/currencies/');
+            if (response.data) {
+                setCurrencies(response.data.result);
+            }
+        }
+        getCurrencies()
+
+        async function getCurs() {
+            try {
+                const response = await axios.get('https://www.binance.com/bapi/asset/v1/public/asset-service/product/currency');
+
+                if (response.data) {
+                    response.data.data.forEach((item) => {
+                        if (item.pair === 'RUB_USD') {
+                            setCurs(item.rate);
+                        }
+                    })
+                } else {
+                    setCurs(0);
+                }
+            } catch (error) {
+                console.error("Error fetching withdraws:", error);
+                setCurs(0);
+            }
+        }
+        getCurs()
+    }, [])
+
 
     useEffect(() => {
+        async function getBanks() {
+            const response = await axiinstance.get('/admin/banks/');
+            if (response.data) {
+                setBanks(response.data.result);
+                setBanksis(
+                    response.data.result.reduce((acc, bank) => {
+                        acc[bank.id.toString()] = bank.id.toString();
+                        return acc;
+                    }, {})
+                )
+                setBankName(
+                    response.data.result.reduce((acc, bank) => {
+                        acc[bank.id.toString()] = bank.name.toString();
+                        return acc;
+                    }, {})
+                )
+                if (filterConfig.bank_ids.length === 0) {
+                    setFilterConfig( {...filterConfig, 
+                        bank_ids: [...Object.keys(banks)]}
+                    )
+                }
+            }
+        }
         // Асинхронная функция для получения данных
         async function getWithdraws() {
             try {
@@ -469,7 +731,7 @@ function Withdraws() {
                         page: currentPage,
                         limit: itemsPerPage,
                         statuses: filterConfig.statuses,
-                        banks: filterConfig.banks,
+                        bank_ids: filterConfig.bank_ids,
                         sort_by: sortConfig.field,
                         order: sortConfig.direction,
                         ...(search.trim() ? { search: search } : {}),
@@ -487,13 +749,24 @@ function Withdraws() {
             }
         }
 
+        async function getUsers() {
+            const response = await axiinstance.get('/admin/users/');
+            if (response.data) {
+                setUsers(response.data.result);
+            }
+        }
+
+        
+
         // Основная логика получения и обработки данных
         async function fetchData() {
+            getBanks()
+            getUsers()
             const data = await getWithdraws();
-            setTotalPages(data.meta.total_pages)
-            setTotalAmount(data.meta.total_amount)
-            setPageAmount(data.meta.page_amount)
-            const withdraws = data.withdraws;
+            setTotalPages(data.result.meta.pages)
+            setTotalAmount(data.result.meta.usdt_total_amount)
+            setPageAmount(data.result.meta.usdt_page_amount)
+            const withdraws = data.result.withdraws;
             //
             // const boldText = (text, offset, length) => {
             //     let updatedText = text.slice(0, offset + length) + "</span>" + text.slice(offset + length);
@@ -508,8 +781,7 @@ function Withdraws() {
                         datetime: new Date(withdraw.datetime).toLocaleString('ru-RU', {
                             hour12: false,
                         }).replace(/,/g, ''),
-                        amount: floatToStr(parseFloat(withdraw.amount)),
-                        amount_in_usd: floatToStr(parseFloat(withdraw.amount_in_usd.toFixed(2)))
+                        amount: withdraw.usdt_amount.toFixed(2)
                     }
                     // baseFormatted.searched?.forEach((dict) => {
                     //     const field = dict.field;
@@ -530,7 +802,7 @@ function Withdraws() {
         }
 
         fetchData();
-    }, [sortConfig, filterConfig, currentPage, itemsPerPage, search]);
+    }, [sortConfig, filterConfig, currentPage, itemsPerPage, search, withdraws, activeModal]);
 
     useEffect(() => {
         setCurrentPage(1)
@@ -570,9 +842,10 @@ function Withdraws() {
                     isVisible={activeModal === "bankModal"} // Показываем модал, если активен "bankModal"
                     position={modalPosition}
                     options={banks}
-                    selectedOptions={filterConfig.banks}
+                    selectedOptions={filterConfig.bank_ids}
                     onToggleOption={toggleBank}
                     onClose={() => setActiveModal(null)} // Закрытие модала, сброс состояния
+                    name={bankName}
                 />
                 <ChoiceModal
                     isVisible={activeModal === "statusModal"} // Показываем модал, если активен "bankModal"
@@ -580,6 +853,14 @@ function Withdraws() {
                     options={statuses}
                     selectedOptions={filterConfig.statuses}
                     onToggleOption={toggleStatus}
+                    onClose={() => setActiveModal(null)} // Закрытие модала, сброс состояния
+                    name={statuses}
+                />
+                <StatusEditModal
+                    isVisible={activeModal === "statusEditModal"} // Показываем модал, если активен "bankModal"
+                    position={modalPosition}
+                    status={statuses}
+                    statusId={statusId}
                     onClose={() => setActiveModal(null)} // Закрытие модала, сброс состояния
                 />
                 <div className='top'>
@@ -590,8 +871,8 @@ function Withdraws() {
                             <img className="cluse_svg" src='data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiA/Pjxzdmcgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgMjQgMjQ7IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PGcgaWQ9ImluZm8iLz48ZyBpZD0iaWNvbnMiPjxwYXRoIGQ9Ik0xNC44LDEybDMuNi0zLjZjMC44LTAuOCwwLjgtMiwwLTIuOGMtMC44LTAuOC0yLTAuOC0yLjgsMEwxMiw5LjJMOC40LDUuNmMtMC44LTAuOC0yLTAuOC0yLjgsMCAgIGMtMC44LDAuOC0wLjgsMiwwLDIuOEw5LjIsMTJsLTMuNiwzLjZjLTAuOCwwLjgtMC44LDIsMCwyLjhDNiwxOC44LDYuNSwxOSw3LDE5czEtMC4yLDEuNC0wLjZsMy42LTMuNmwzLjYsMy42ICAgQzE2LDE4LjgsMTYuNSwxOSwxNywxOXMxLTAuMiwxLjQtMC42YzAuOC0wLjgsMC44LTIsMC0yLjhMMTQuOCwxMnoiIGlkPSJleGl0Ii8+PC9nPjwvc3ZnPg==' alt="" />
                         </div>
                     </div>
-                    <p>Общая сумма:<br />{floatToStr(totalAmount)} $</p>
-                    <p>Сумма страницы:<br />{floatToStr(pageAmount)} $</p>
+                    <p>Общая сумма:<br />{floatToStr((totalAmount * curs * 100) / 100)} ₽ ({floatToStr(totalAmount)} ₮)</p>
+                    <p>Сумма страницы:<br />{floatToStr((pageAmount * curs * 100) / 100)} ₽ ({floatToStr(pageAmount)} ₮)</p>
                     <div className={`only-waiting ${(filterConfig.statuses.length === 1 && filterConfig.statuses[0] === "waiting") ? "waiting" : ""}`} onClick={() => {
                         setFilterConfig({
                             ...filterConfig,
@@ -657,17 +938,23 @@ function Withdraws() {
                         </thead>
                         <tbody>
                             {filteredWithdraws.length > 0 &&
-                                filteredWithdraws.map((i) => (
-                                    <tr key={i.id}>
+                                filteredWithdraws.map((i) => {
+                                    const user = filteredUsers.find(u => u.id === i.user_id);
+                                    const bank = filteredBanks.find(u => u.id === i.bank_id);
+
+                                    if (!user) return null;
+                                    if (!bank) return null;
+
+                                    return (<tr key={i.id}>
                                         <td>{i.id}</td>
                                         <td>{i.datetime}</td>
-                                        {!isFullscreen && <td>{i.user}</td>}
+                                        {!isFullscreen && <td><a target="_blank" href={`https://t.me/${user.tg_username}`}>@{user.tg_username}</a></td>}
                                         <td><span className="text-to-click" onClick={() => savePhone(i.id)}>{i.phone}</span>
                                         </td>
                                         <td><span className="text-to-click" onClick={() => saveCard(i.id)}>{i.card}</span>
                                         </td>
                                         <td>{i.receiver}</td>
-                                        <td>{banks[i.bank]} {
+                                        <td>{bank.name} {
                                             i.comment &&
                                             <svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'
                                                 viewBox='0 0 20 20' fill='red'
@@ -677,7 +964,13 @@ function Withdraws() {
                                                     d="M9.0001 8.517C8.58589 8.517 8.2501 8.85279 8.2501 9.267C8.2501 9.68121 8.58589 10.017 9.0001 10.017V8.517ZM16.0001 10.017C16.4143 10.017 16.7501 9.68121 16.7501 9.267C16.7501 8.85279 16.4143 8.517 16.0001 8.517V10.017ZM9.8751 11.076C9.46089 11.076 9.1251 11.4118 9.1251 11.826C9.1251 12.2402 9.46089 12.576 9.8751 12.576V11.076ZM15.1251 12.576C15.5393 12.576 15.8751 12.2402 15.8751 11.826C15.8751 11.4118 15.5393 11.076 15.1251 11.076V12.576ZM9.1631 5V4.24998L9.15763 4.25002L9.1631 5ZM15.8381 5L15.8438 4.25H15.8381V5ZM19.5001 8.717L18.7501 8.71149V8.717H19.5001ZM19.5001 13.23H18.7501L18.7501 13.2355L19.5001 13.23ZM18.4384 15.8472L17.9042 15.3207L17.9042 15.3207L18.4384 15.8472ZM15.8371 16.947V17.697L15.8426 17.697L15.8371 16.947ZM9.1631 16.947V16.197C9.03469 16.197 8.90843 16.23 8.79641 16.2928L9.1631 16.947ZM5.5001 19H4.7501C4.7501 19.2662 4.89125 19.5125 5.12097 19.6471C5.35068 19.7817 5.63454 19.7844 5.86679 19.6542L5.5001 19ZM5.5001 8.717H6.25012L6.25008 8.71149L5.5001 8.717ZM6.56175 6.09984L6.02756 5.5734H6.02756L6.56175 6.09984ZM9.0001 10.017H16.0001V8.517H9.0001V10.017ZM9.8751 12.576H15.1251V11.076H9.8751V12.576ZM9.1631 5.75H15.8381V4.25H9.1631V5.75ZM15.8324 5.74998C17.4559 5.76225 18.762 7.08806 18.7501 8.71149L20.2501 8.72251C20.2681 6.2708 18.2955 4.26856 15.8438 4.25002L15.8324 5.74998ZM18.7501 8.717V13.23H20.2501V8.717H18.7501ZM18.7501 13.2355C18.7558 14.0153 18.4516 14.7653 17.9042 15.3207L18.9726 16.3736C19.7992 15.5348 20.2587 14.4021 20.2501 13.2245L18.7501 13.2355ZM17.9042 15.3207C17.3569 15.8761 16.6114 16.1913 15.8316 16.197L15.8426 17.697C17.0201 17.6884 18.1461 17.2124 18.9726 16.3736L17.9042 15.3207ZM15.8371 16.197H9.1631V17.697H15.8371V16.197ZM8.79641 16.2928L5.13341 18.3458L5.86679 19.6542L9.52979 17.6012L8.79641 16.2928ZM6.2501 19V8.717H4.7501V19H6.2501ZM6.25008 8.71149C6.24435 7.93175 6.54862 7.18167 7.09595 6.62627L6.02756 5.5734C5.20098 6.41216 4.74147 7.54494 4.75012 8.72251L6.25008 8.71149ZM7.09595 6.62627C7.64328 6.07088 8.38882 5.75566 9.16857 5.74998L9.15763 4.25002C7.98006 4.2586 6.85413 4.73464 6.02756 5.5734L7.09595 6.62627Z"></path>
                                             </svg>
                                         }</td>
-                                        <td>{i.amount}</td>
+                                        <td>
+                                            {currencies.map((e) => (
+                                                i.currency_id === e.id ?
+                                                    `${floatToStr(Number(i.amount) * Number(e.rate))} ${e.symbol}`
+                                                    : null
+                                            ))}
+                                        </td>
                                         <td onClick={() => {
                                             setInputTagId(inputTagId === i.id ? null : i.id)
                                         }}>
@@ -694,7 +987,7 @@ function Withdraws() {
                                                         }
                                                     }} />)}
                                         </td>
-                                        <td className={i.status}>{statusToSvg[i.status]}</td>
+                                        <td className={i.status} onClick={(e) => handleStatusEditClick(e, i.id)}>{statusToSvg[i.status]}</td>
                                         <td>
                                             {i.document ?
                                                 <span className="text-to-click"></span>
@@ -713,8 +1006,9 @@ function Withdraws() {
                                             }
 
                                         </td>
-                                    </tr>
-                                ))
+                                    </tr>)
+                                }
+                                )
                             }
                         </tbody>
                     </table>
@@ -800,9 +1094,53 @@ function Withdraws() {
 
 function TopUps() {
     const [topups, setTopups] = useState([]);
+    const [users, setUsers] = useState([]);
+    const userIds = [...new Set(topups.map(topups => topups.user_id))];
+    const filteredUsers = users.filter(user => userIds.includes(user.id));
     const [filteredTopups, setFilteredTopups] = useState([]);
+    const [banks, setBanksis] = useState([]);
+
+    // Получение списка пользователей и списка транзакций из API
+    useEffect(() => {
+        async function getUsers() {
+            const response = await axiinstance.get('/admin/users/');
+            if (response.data) {
+                setUsers(response.data.result);
+            }
+        }
+        async function getTopups() {
+            const response = await axiinstance.get('/admin/topups/', {
+                params: {
+                    page: 1,
+                    limit: 200,
+                    sort_by: "datetime",
+                },
+            });
+            if (response.data) {
+                setTopups(response.data.result.topups);
+            }
+        }
+        async function getBanks() {
+            const response = await axiinstance.get('/admin/banks/');
+            if (response.data) {
+               
+                setBanksis(
+                    response.data.result.reduce((acc, bank) => {
+                        acc[bank.id.toString()] = bank.id.toString();
+                        return acc;
+                    }, {})
+                )
+                
+            }
+        }
+        getBanks()
+        getTopups()
+        getUsers()
+        getTopups()
+    }, []);
+
     const [activeModal, setActiveModal] = useState(null);
-    const [modalPosition, setModalPosition] = useState({ top: 0, left: 0 }); 
+    const [modalPosition, setModalPosition] = useState({ top: 0, left: 0 });
     const [search, setSearch] = useState('');
     const [sortConfig, setSortConfig] = useState({ field: 'datetime', direction: 'desc', name: 'Сегодня' })
     const [filterConfig, setFilterConfig] = useState({
@@ -815,13 +1153,21 @@ function TopUps() {
         amount: { min: '', max: '', in_usd: true },
         startDate: '', // Начальная дата
         endDate: '', // Конечная дата
-    })   
+    })
     const [modal, setModal] = useState(null)
 
     const [applyAmountMin, setApplyAmountMin] = useState(''); // Минимум суммы для применения
     const [applyAmountMax, setApplyAmountMax] = useState(''); // Максимум суммы для применения
     const [applyStartDate, setApplyStartDate] = useState(''); // Начальная дата для применения
     const [applyEndDate, setApplyEndDate] = useState(''); // Конечная дата для применения
+
+
+
+
+
+
+
+
 
     // Обработчик нажатия кнопки "Применить"
     const handleApplyFilters = () => {
@@ -864,16 +1210,7 @@ function TopUps() {
     }
 
 
-    useEffect(() => {
-        async function getTopups() {
-            const response = await axiinstance.get('/admin/topups/');
-            if (response.data) {
-                setTopups(response.data);
-            }
-        }
 
-        getTopups()
-    }, []);
 
     useEffect(() => {
         let filtered = [...topups]
@@ -890,11 +1227,11 @@ function TopUps() {
         if (filterConfig.startDate && filterConfig.endDate) {
             const startDate = new Date(filterConfig.startDate);
             const endDate = new Date(filterConfig.endDate);
-        
+
             // Учитываем конец дня
             endDate.setDate(endDate.getDate() + 1); // Добавляем один день, чтобы включить всю дату до конца дня
             endDate.setHours(0); // Устанавливаем время на начало дня
-        
+
             filtered = filtered.filter((item) => {
                 const itemDate = new Date(item.datetime);
                 return itemDate >= startDate && itemDate <= endDate; // Меняем оператор <= на <
@@ -907,12 +1244,8 @@ function TopUps() {
 
             filtered = filtered.filter((i) => {
                 let value
-                if (filterConfig.amount.in_usd) {
-                    value = parseFloat(i.amount_in_usd)
-                } else {
-                    value = parseFloat(i.amount);
-                }
-                return value >= min_value && value <= max_value;
+                value = parseFloat(i.amount_in_usd)
+                return i.amount_in_usd >= min_value && value <= max_value;
             })
         }
 
@@ -924,9 +1257,9 @@ function TopUps() {
             });
         }
 
-        filtered = filtered.filter((i) => {
-            return filterConfig.statuses.some((ii) => ii === i.status)
-        })
+        // filtered = filtered.filter((i) => {
+        //     return filterConfig.statuses.some((ii) => ii === i.status)
+        // })
 
         const sorted = [...filtered].sort((a, b) => {
             const valueA = sortConfig.field === 'datetime' ? new Date(a[sortConfig.field]) : a[sortConfig.field];
@@ -942,8 +1275,7 @@ function TopUps() {
             datetime: new Date(transaction.datetime).toLocaleString('ru-RU', {
                 hour12: false,
             }).replace(/,/g, ''),
-            amount: parseFloat(transaction.amount.toFixed(2)),
-            amount_in_usd: parseFloat(transaction.amount_in_usd.toFixed(2)),
+            usdt_amount: parseFloat(transaction.usdt_amount.toFixed(2)),
         }));
 
         setFilteredTopups(formattedTopups);
@@ -959,24 +1291,24 @@ function TopUps() {
         applyEndDate,
     ]);
 
-    
+
     const toggleStatus = (status) => {
         setFilterConfig((prev) => ({
             ...prev,
             statuses: prev.statuses.includes(status)
-            ? (prev.statuses.length > 1 ? prev.statuses.filter((s) => s !== status) : [...prev.statuses])
-            : [...prev.statuses, status],
+                ? (prev.statuses.length > 1 ? prev.statuses.filter((s) => s !== status) : [...prev.statuses])
+                : [...prev.statuses, status],
         }));
     };
-    
+
     function handleStatusClick(event) {
         const buttonRect = event.target.getBoundingClientRect();
-        
+
         setModalPosition({
             top: buttonRect.bottom + window.scrollY + 5,
             left: buttonRect.left + window.scrollX,
         });
-        
+
         setActiveModal(!activeModal ? "statusModal" : null); // Открываем модал для выбора статуса
     }
 
@@ -994,12 +1326,12 @@ function TopUps() {
     }
     const handleTodayFilter = () => {
         setFilterConfig(prev => ({ ...prev, today: true }));
-        setFilterConfig(prev => ({...prev, oldTransactions: false }));
+        setFilterConfig(prev => ({ ...prev, oldTransactions: false }));
     };
 
     // Функция для установки флага oldTransactions в true
     const handleOldTransactionsFilter = () => {
-        setFilterConfig(prev => ({...prev, oldTransactions: true }));
+        setFilterConfig(prev => ({ ...prev, oldTransactions: true }));
         setFilterConfig(prev => ({ ...prev, today: false }));
     };
 
@@ -1010,7 +1342,7 @@ function TopUps() {
                     if (event.target === event.currentTarget) {
                         setModal(null)
                     }
-                }}>                   
+                }}>
                     {modal === 'filter' && (
                         <div className='modal-tab filter'>
                             <h3>Фильтрация по сумме</h3>
@@ -1026,11 +1358,11 @@ function TopUps() {
                                     }
                                 }} />
                                 <input type="text" className='input-text' value={applyAmountMax} placeholder='До' onChange={(event) => {
-                                        if (/^(\d*|\d+[,.]\d*)$/.test(event.target.value)) {
-                                            const newValue = event.target.value.replace(/,/, '.');
-                                            setApplyAmountMax(newValue);
-                                        }
-                                    }} />
+                                    if (/^(\d*|\d+[,.]\d*)$/.test(event.target.value)) {
+                                        const newValue = event.target.value.replace(/,/, '.');
+                                        setApplyAmountMax(newValue);
+                                    }
+                                }} />
                             </div>
                             <div className="polosa"></div>
                             <h3>Фильтрация по дате</h3>
@@ -1123,10 +1455,10 @@ function TopUps() {
                                 }}
                             >Дата{sortArrow('datetime')}</th>
                             <th>Пользователь</th>
-                            <th onClick={handleStatusClick}
+                            {/* <th onClick={handleStatusClick}
                                 title={`${filterConfig.statuses.length === 1 ? statuses[filterConfig.statuses[0]] : 'Все'}`}
                                 style={{ width: 'fit-content' }}
-                            >Статус</th>
+                            >Статус</th> */}
                             <th
                                 onClick={() => {
                                     if (sortConfig.field === 'amount_in_usd') {
@@ -1144,16 +1476,19 @@ function TopUps() {
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredTopups.length > 0 &&
-                            filteredTopups.map((i) => (
+                        {filteredTopups.length > 0 && filteredTopups.map(i => {
+                            const user = filteredUsers.find(u => u.id === i.user_id);
+                            if (!user) return null;
+
+                            return (
                                 <tr key={i.id}>
                                     <td>{i.datetime}</td>
-                                    <td>{i.user}</td>
-                                    <td className={i.status}>{statusToSvg[i.status]}</td>
-                                    <td>{i.amount_in_usd+' ₮'}</td>
+                                    <td><a target="_blank" href={`https://t.me/${user.tg_username}`}>@{user.tg_username}</a></td>
+                                    {/* <td className={i.status}>{statusToSvg[i.status]}</td> */}
+                                    <td><a target="_blank" href={`https://tronscan.org/#/transaction/${i.transaction_hash}`}>{i.usdt_amount.toFixed(2) + ' ₮'}</a></td>
                                 </tr>
-                            ))
-                        }
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>
@@ -1164,24 +1499,29 @@ function TopUps() {
 function Users() {
     const [users, setUsers] = useState([]); // Массив пользователей
     const [filteredUsers, setFilteredUsers] = useState([]); // Фильтрованный массив пользователей
-    const [showEditModal, setShowEditModal] = useState(false); // Управление видимостью модального окна
+    const inputRef = useRef(null)
     const [editingUserId, setEditingUserId] = useState(null); // ID пользователя, чей баланс редактируется
-    const [editingPosition, setEditingPosition] = useState({ top: 0, left: 0 }); // Позиция модального окна
 
     useEffect(() => {
         async function getUsers() {
             const response = await axiinstance.get('/admin/users/');
             if (response.data) {
-                setUsers(response.data);
+                setUsers(response.data.result);
             }
         }
         getUsers()
     }, []);
 
     useEffect(() => {
+        if (inputRef.current) {
+            inputRef.current.focus();
+        }
+    }, [editingUserId]);
+
+    useEffect(() => {
         const formattedUsers = users.map((transaction) => ({
             ...transaction,
-            datetime: new Date(transaction.datetime).toLocaleString('ru-RU', {
+            registered_at: new Date(transaction.registered_at).toLocaleString('ru-RU', {
                 hour12: false,
             }).replace(/,/g, ''),
         }));
@@ -1191,35 +1531,24 @@ function Users() {
 
     }, [users])
 
-    const editIcon = (event, userName) => {
-        event.preventDefault(); // Предотвращаем стандартное поведение
-        setEditingUserId(userName); // Устанавливаем ID пользователя для редактирования
-        setEditingPosition({ top: event.clientY, left: event.clientX }); // Устанавливаем позицию модального окна
-        setShowEditModal(true); // Показываем модальное окно
-    };
+    async function save_balance(id, balance) {
+        try {
+            await axiinstance.patch('/admin/user/' + id + '/', { usdt_balance: Number(balance), role: "admin" });
+            setUsers(users.map(item =>
+                item.id === id
+                    ? { ...item, usdt_balance: balance }
+                    : item
+            )
+            )
+        } catch (error) {
+            console.log(error)
+        }
+    }
 
-    const saveBalance = (newBalance) => {
-        // Логика обновления баланса пользователя с ID editingUserId
-        const updatedUsers = users.map((user) =>
-            user.name === editingUserId ? { ...user, balance: newBalance } : user
-        );
-        setUsers(updatedUsers); // Обновляем массив пользователей
-        setShowEditModal(false); // Скрываем модальное окно после сохранения
-    };
+
 
     return (
         <div className='users'>
-            {showEditModal && (
-                <BalanceEditModal
-                    isVisible={showEditModal}
-                    position={editingPosition}
-                    balance={
-                        users.find((user) => user.name === editingUserId)?.balance ?? 0
-                    }
-                    onSave={saveBalance}
-                    onClose={() => setShowEditModal(false)}
-                />
-            )}
             <div className='table'>
                 <table>
                     <thead>
@@ -1235,17 +1564,25 @@ function Users() {
                     <tbody>
                         {filteredUsers.length > 0 &&
                             filteredUsers.map((i) => (
-                                <tr key={i.name}>
-                                    <td>{i.datetime}</td>
-                                    <td>{i.name}</td>
-                                    <td><a href={`tg://resolve?domain=${i.username}`}>@{i.username}</a></td>
-                                    <td className="balance">{i.balance}
-                                    <div
-                                            className="edit-icon"
-                                            onClick={(event) => editIcon(event, i.name)}
-                                        >
-                                            {correctionSvg}
-                                        </div>
+                                <tr key={i.id}>
+                                    <td>{i.registered_at}</td>
+                                    <td>{i.first_name}</td>
+                                    <td><a target="_blank" href={`https://t.me/${i.tg_username}`}>@{i.tg_username}</a></td>
+                                    <td onClick={() => {
+                                        setEditingUserId(editingUserId === i.id ? null : i.id)
+                                    }}>
+                                        {editingUserId !== i.id ?
+                                            (<span>{floatToStr(i.usdt_balance)} ₮</span>)
+                                            :
+                                            (<input type="text" className='input-in-table' ref={inputRef}
+                                                onKeyUp={(event) => {
+                                                    if (event.key === 'Enter' && event.target.value !== "") {
+                                                        save_balance(i.id, event.target.value);
+                                                    }
+                                                    if (event.key === "Enter" || event.key === "Escape") {
+                                                        setEditingUserId(null);
+                                                    }
+                                                }} />)}
                                     </td>
                                     <td></td>
                                     <td></td>
@@ -1262,7 +1599,9 @@ function Users() {
 function Currencies() {
     const [currencies, setCurrencies] = useState([]);
     const [filteredCurrencies, setFilteredCurrencies] = useState([]);
+    const [banks, setBanks] = useState([]);
     const [modal, setModal] = useState(false);
+    const [modalBank, setModalBank] = useState(false);
     const [modalForm, setModalForm] = useState({
         name: '',
         code: '',
@@ -1271,7 +1610,15 @@ function Currencies() {
         min_amount: '',
         commission_step: ''
     });
+    const [modalBankForm, setModalBankForm] = useState({
+        name: '',
+        code: '',
+    });
     const [zeroErrors, setZeroErrors] = useState(false);
+    const notificationRef = useRef(null);
+    const [notificationText, setNotificationText] = useState('');
+    const [inputRefs, setInputRefs] = useState({}); // Ссылки на input для каждого параметра
+    const [editMode, setEditMode] = useState({}); // Объект для отслеживания режима редактирования
 
     function changeModalValue(event) {
         let className = event.target.className;
@@ -1295,6 +1642,27 @@ function Currencies() {
         setZeroErrors(Object.values(modalForm).every(value => value !== ""))
     }
 
+    function changeModaBanklValue(event) {
+        let className = event.target.className;
+        let value = event.target.value;
+
+        setModalBankForm({ ...modalBankForm, [className]: value });
+
+        setZeroErrors(Object.values(modalBankForm).every(value => value !== ""))
+    }
+
+    async function createBankButton() {
+        await setZeroErrors(Object.values(modalBankForm).every(value => value !== ""))
+        if (zeroErrors) {
+            await axiinstance.post('admin/bank/', modalBankForm).catch((error) => {
+                if (!error.response.data.detail.ok) {
+                    callNotification("Банк уже создан")
+                }
+            })
+            setModalBank(false)
+        }
+    }
+
     async function createButton() {
         await setZeroErrors(Object.values(modalForm).every(value => value !== ""))
         if (zeroErrors) {
@@ -1314,11 +1682,19 @@ function Currencies() {
         async function getCurrencies() {
             const response = await axiinstance.get('/admin/currencies/');
             if (response.data) {
-                setCurrencies(response.data);
+                setCurrencies(response.data.result);
             }
         }
         getCurrencies()
-    }, []);
+        async function getBanks() {
+            const response = await axiinstance.get('/admin/banks/');
+            if (response.data) {
+                setBanks(response.data.result);
+            }
+        }
+        getBanks()
+
+    }, [modal, modalBank]);
 
     useEffect(() => {
         const formattedCurrencies = currencies.map((transaction) => ({
@@ -1333,8 +1709,85 @@ function Currencies() {
 
     }, [currencies])
 
+    function callNotification(text, seconds = 3) {
+        setNotificationText(text);
+
+        if (notificationRef.current) {
+            notificationRef.current.show();
+
+            // Если есть уже активный таймер, отменяем его
+            if (notificationTimer) {
+                clearTimeout(notificationTimer);
+            }
+
+            // Устанавливаем новый таймер
+            notificationTimer = setTimeout(() => {
+                // Добавляем класс для плавного исчезновения
+                notificationRef.current.classList.add('fade-out');
+                setTimeout(() => {
+                    notificationRef.current.close();
+                    setNotificationText('');
+                    // Убираем класс после закрытия
+                    notificationRef.current.classList.remove('fade-out');
+                }, 1000); // Время совпадает с длительностью анимации
+            }, (seconds - 1) * 1000); // Учёт последней секунды для анимации
+        }
+    }
+
+    // Функция для сохранения изменений на сервере
+    const saveParameter = async (id, field, value) => {
+        try {
+            await axiinstance.patch(`/admin/currency/${id}/`, { [field]: value });
+            setFilteredCurrencies(
+                filteredCurrencies.map(item =>
+                    item.id === id
+                        ? { ...item, [field]: value }
+                        : item
+                )
+            );
+        } catch (error) {
+            if (error.response.data.detail) {
+                error.response.data.detail.forEach(element => {
+                    if (element.type === 'float_parsing') {
+                        callNotification("Введите число")
+                    }
+                });
+            }
+            console.error('Ошибка сохранения данных:', error);
+        }
+    };
+
+
+    // Установка ссылок на input
+    useEffect(() => {
+        const refs = {};
+        filteredCurrencies.forEach(currency => {
+            Object.keys(currency).forEach(field => {
+                refs[currency.id + '-' + field] = React.createRef();
+            });
+        });
+        setInputRefs(refs);
+    }, [filteredCurrencies]);
+
+    // Форматирование значений для отображения
+    const getFormattedFieldValue = (field, value) => {
+        switch (field) {
+            case 'commission_step':
+                return floatToStr(value) + ' %';
+            case 'min_amount':
+                return floatToStr(value) + ' ₽';
+            case 'percent':
+                return floatToStr(value) + ' %';
+            default:
+                return value;
+        }
+    };
+
     return (
         <div className='currencies'>
+            <dialog ref={notificationRef} className='notification'>
+                {notificationText}
+            </dialog>
             <div className='table'>
                 <table>
                     <thead>
@@ -1349,16 +1802,44 @@ function Currencies() {
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredCurrencies.length > 0 &&
-                            filteredCurrencies.map((i) => (
-                                <tr key={i.id}>
-                                    <td>{i.name}</td>
-                                    <td>{i.code}</td>
-                                    <td>{i.symbol}</td>
-                                    <td>{i.rate}</td>
-                                    <td>{i.percent}</td>
-                                    <td>{i.min_amount}</td>
-                                    <td>{i.commission_step}</td>
+                        {
+                            filteredCurrencies.length > 0 && filteredCurrencies.map(currency => (
+                                <tr key={currency.id}>
+                                    {Object.keys(currency)
+                                        .filter(field => field !== 'id' && field !== 'datetime') // Исключаем поле 'id'
+                                        .map(field => (
+                                            <td key={`${currency.id}-${field}`} onClick={(e) => {
+                                                setEditMode({
+                                                    ...editMode,
+                                                    [currency.id + '-' + field]: !editMode[currency.id + '-' + field]
+                                                });
+
+                                                e.stopPropagation();
+                                            }}>
+                                                {editMode[currency.id + '-' + field] ? (
+                                                    <input
+                                                        type="text"
+                                                        className='input-in-table'
+                                                        ref={inputRefs[currency.id + '-' + field]}
+
+                                                        onKeyUp={event => {
+                                                            if (event.key === 'Enter' && event.target.value !== '') {
+                                                                saveParameter(currency.id, field, event.target.value);
+                                                            }
+                                                            if (['Enter', 'Escape'].includes(event.key)) {
+                                                                setEditMode({
+                                                                    ...editMode,
+                                                                    [currency.id + '-' + field]: false
+                                                                });
+                                                            }
+                                                        }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    />
+                                                ) : (
+                                                    <span>{getFormattedFieldValue(field, currency[field])}</span>
+                                                )}
+                                            </td>
+                                        ))}
                                 </tr>
                             ))
                         }
@@ -1434,11 +1915,69 @@ function Currencies() {
                         </button>
                     </div>
                 </div>
-            ) : (
-                <button className='create-currency' onClick={() => setModal(true)}>
-                    Создать новую валюту
-                </button>
-            )}
+            ) : (null)}
+            <button className='create-currency' onClick={() => setModal(true)}>
+                Создать новую валюту
+            </button>
+            <div className='table'>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Название</th>
+                            <th>Код</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {banks.length > 0 &&
+                            banks.map((i) => (
+                                <tr key={i.id}>
+                                    <td>{i.id}</td>
+                                    <td>{i.name}</td>
+                                    <td>{i.code}</td>
+                                </tr>
+                            ))
+                        }
+                    </tbody>
+                </table>
+            </div>
+            {modalBank ? (
+                <div className='modal' onClick={() => setModalBank(false)}>
+                    <div
+                        className='modal-tab'
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3>Новый банк</h3>
+                        <div className='input-group'>
+                            <p>Название банка</p>
+                            <input
+                                type="text"
+                                className='name'
+                                value={modalBankForm.name}
+                                onChange={changeModaBanklValue}
+                            />
+                        </div>
+                        <div className='input-group'>
+                            <p>Код банка</p>
+                            <input
+                                type="text"
+                                className='code'
+                                value={modalBankForm.code}
+                                onChange={changeModaBanklValue}
+                            />
+                        </div>
+                        <button
+                            className={zeroErrors ? '' : 'inactive'}
+                            onClick={createBankButton}
+                        >
+                            Создать
+                        </button>
+                    </div>
+                </div>
+            ) : (null)}
+            <button className='create-currency' onClick={() => setModalBank(true)}>
+                Создать новый банк
+            </button>
         </div>
     )
 }

@@ -7,6 +7,7 @@ const ChoiceModal = ({
                          selectedOptions,
                          onToggleOption,
                          onClose,
+                         name
                      }) => {
     const modalRef = useRef(null);
 
@@ -33,7 +34,7 @@ const ChoiceModal = ({
                         type="checkbox"
                         checked={selectedOptions.includes(optionKey)}
                     />
-                    <p>{options[optionKey]}</p>
+                    <p>{name[optionKey]}</p>
                 </div>
             ))}
             <button onClick={onClose}>Закрыть</button>
